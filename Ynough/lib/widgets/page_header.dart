@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class PageHeader extends StatelessWidget {
   const PageHeader({
@@ -55,8 +56,8 @@ class _YnoughHeaderLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: Image.asset(
-        'images/Logo-transparent.png',
+      child: SvgPicture.asset(
+        'images/Logo-transparent.svg',
         width: 86,
         height: 86,
         fit: BoxFit.contain,

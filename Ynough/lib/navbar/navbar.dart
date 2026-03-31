@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:ynough/pageEquipe/screen/teams_screen.dart';
 
 import '../matches/matches_page.dart';
-import '../pages/placeholder_page.dart';
 import '../ranking/ranking_page.dart';
+import '../screen/home_screen.dart';
 
 const ynoughBlack = Color(0xFF0A0A0A);
 const ynoughGreen = Color(0xFF3E5F44);
@@ -24,11 +24,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       title: 'Accueil',
       icon: Icons.home_outlined,
       selectedIcon: Icons.home,
-      page: PlaceholderPage(
-        title: 'Accueil',
-        subtitle: 'Match en cours, top 3 classement, prochains matchs',
-        icon: Icons.home,
-      ),
+      page: HomeScreen(),
     ),
     const _NavigationPageData(
       title: 'Equipes',
