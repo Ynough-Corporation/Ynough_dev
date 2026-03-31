@@ -23,6 +23,28 @@ class YnoughApi {
         .toList(growable: false);
   }
 
+  Future<ApiTeam> createTeam({
+    required String name,
+    required String player1,
+    required String player2,
+  }) async {
+    final response = await _send(
+      'POST',
+      '/api/teams',
+      body: {
+        'name': name,
+        'player_1': player1,
+        'player_2': player2,
+      },
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return ApiTeam.fromJson(data);
+  }
+
+  Future<void> deleteTeam(int teamId) async {
+    await _send('DELETE', '/teams/$teamId');
+  }
+
   Future<List<ApiMatch>> fetchMatches({String? status}) async {
     final response = await _get(
       '/api/matches',
@@ -38,11 +60,33 @@ class YnoughApi {
     String path, {
     Map<String, String>? queryParameters,
   }) async {
+    return _send('GET', path, queryParameters: queryParameters);
+  }
+
+  Future<http.Response> _send(
+    String method,
+    String path, {
+    Map<String, String>? queryParameters,
+    Map<String, dynamic>? body,
+  }) async {
     final uri = _baseUri.replace(
       path: _joinPath(_baseUri.path, path),
       queryParameters: queryParameters,
     );
-    final response = await _client.get(uri);
+    late final http.Response response;
+    if (method == 'GET') {
+      response = await _client.get(uri);
+    } else if (method == 'POST') {
+      response = await _client.post(
+        uri,
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+    } else if (method == 'DELETE') {
+      response = await _client.delete(uri);
+    } else {
+      throw ApiException('Unsupported HTTP method: $method');
+    }
     if (response.statusCode >= 400) {
       throw ApiException(
         'Request failed with status ${response.statusCode}: ${response.body}',

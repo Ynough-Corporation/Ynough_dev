@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'navbar/navbar.dart';
 
 const _ynoughBlack = Color(0xFF0A0A0A);

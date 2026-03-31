@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ynough/pageEquipe/screen/teams_screen.dart';
 
 import '../matches/matches_page.dart';
 import '../pages/placeholder_page.dart';
@@ -33,11 +34,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       title: 'Equipes',
       icon: Icons.groups_outlined,
       selectedIcon: Icons.groups,
-      page: PlaceholderPage(
-        title: 'Equipes',
-        subtitle: 'Equipes inscrites, leur nombre de victoires et de defaites, bouton ajouter une equipe',
-        icon: Icons.groups,
-      ),
+      page: TeamsScreen(),
     ),
     const _NavigationPageData(
       title: 'Matchs',
