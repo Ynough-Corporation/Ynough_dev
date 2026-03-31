@@ -13,13 +13,215 @@ class MatchesPage extends StatefulWidget {
 }
 
 class _MatchesPageState extends State<MatchesPage> {
-  late final Future<List<MatchItem>> _matchesFuture;
+  final _api = YnoughApi();
+  late Future<_MatchesViewData> _matchesFuture;
   MatchFilter _selectedFilter = MatchFilter.all;
+  bool _submitting = false;
 
   @override
   void initState() {
     super.initState();
     _matchesFuture = _loadMatches();
+  }
+
+  Future<_MatchesViewData> _loadMatches() async {
+    final results = await Future.wait<dynamic>([
+      _api.fetchTeams(),
+      _api.fetchMatches(),
+    ]);
+
+    final teams = results[0] as List<ApiTeam>;
+    final matches = results[1] as List<ApiMatch>;
+    final teamsById = {for (final team in teams) team.id: team};
+
+    final items = matches
+        .map((match) {
+          final team1 = teamsById[match.team1Id];
+          final team2 = teamsById[match.team2Id];
+          if (team1 == null || team2 == null) {
+            return null;
+          }
+
+          return MatchItem(
+            id: match.id,
+            homeTeamId: team1.id,
+            awayTeamId: team2.id,
+            homeTeamName: team1.name,
+            awayTeamName: team2.name,
+            homePlayers: team1.players,
+            awayPlayers: team2.players,
+            homeScore: match.team1Score,
+            awayScore: match.team2Score,
+            status: _toMatchStatus(match.status),
+          );
+        })
+        .whereType<MatchItem>()
+        .toList()
+      ..sort((left, right) => right.id.compareTo(left.id));
+
+    return _MatchesViewData(
+      teams: teams,
+      matches: items,
+    );
+  }
+
+  Future<void> _refreshMatches() async {
+    setState(() {
+      _matchesFuture = _loadMatches();
+    });
+  }
+
+  Future<void> _openCreateMatchDialog(List<ApiTeam> teams) async {
+    int? team1Id;
+    int? team2Id;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> submit() async {
+              if (_submitting || team1Id == null || team2Id == null || team1Id == team2Id) {
+                return;
+              }
+
+              setDialogState(() {
+                _submitting = true;
+              });
+
+              try {
+                await _api.createMatch(
+                  team1Id: team1Id!,
+                  team2Id: team2Id!,
+                  date: DateTime.now(),
+                );
+                if (!mounted) {
+                  return;
+                }
+                Navigator.of(dialogContext).pop();
+                await _refreshMatches();
+              } catch (error) {
+                if (!mounted) {
+                  return;
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Creation impossible: $error')),
+                );
+              } finally {
+                if (mounted) {
+                  setDialogState(() {
+                    _submitting = false;
+                  });
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Nouveau match'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Equipe 1'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    value: team1Id,
+                    items: teams
+                        .map(
+                          (team) => DropdownMenuItem<int>(
+                            value: team.id,
+                            child: Text(team.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        team1Id = value;
+                        if (team1Id == team2Id) {
+                          team2Id = null;
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Equipe 2'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    value: team2Id,
+                    items: teams
+                        .where((team) => team.id != team1Id)
+                        .map(
+                          (team) => DropdownMenuItem<int>(
+                            value: team.id,
+                            child: Text(team.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        team2Id = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  if (team1Id == team2Id && team1Id != null)
+                    const Text(
+                      'Les deux equipes doivent etre differentes.',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: _submitting ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Annuler'),
+                ),
+                FilledButton.icon(
+                  onPressed: _submitting ? null : submit,
+                  icon: const Icon(Icons.play_arrow),
+                  label: Text(_submitting ? 'Creation...' : 'Lancer le match'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _updateScore(MatchItem match, {required bool homeTeam, required int delta}) async {
+    final nextHomeScore = homeTeam ? (match.homeScore + delta).clamp(0, 999) : match.homeScore;
+    final nextAwayScore = homeTeam ? match.awayScore : (match.awayScore + delta).clamp(0, 999);
+
+    try {
+      await _api.updateMatchScore(
+        matchId: match.id,
+        team1Score: nextHomeScore,
+        team2Score: nextAwayScore,
+      );
+      await _refreshMatches();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Mise a jour du score impossible: $error')),
+      );
+    }
+  }
+
+  Future<void> _finishMatch(MatchItem match) async {
+    try {
+      await _api.updateMatchStatus(matchId: match.id, status: 'finished');
+      await _refreshMatches();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fin du match impossible: $error')),
+      );
+    }
   }
 
   @override
@@ -30,10 +232,12 @@ class _MatchesPageState extends State<MatchesPage> {
       color: ynoughCream,
       child: SafeArea(
         top: false,
-        child: FutureBuilder<List<MatchItem>>(
+        child: FutureBuilder<_MatchesViewData>(
           future: _matchesFuture,
           builder: (context, snapshot) {
-            final matches = snapshot.data ?? const <MatchItem>[];
+            final data = snapshot.data;
+            final matches = data?.matches ?? const <MatchItem>[];
+            final teams = data?.teams ?? const <ApiTeam>[];
             final filteredMatches = _selectedFilter.apply(matches);
 
             return Column(
@@ -47,7 +251,7 @@ class _MatchesPageState extends State<MatchesPage> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed: null,
+                    onPressed: teams.length < 2 ? null : () => _openCreateMatchDialog(teams),
                     icon: const Icon(Icons.add),
                     label: const Text('Nouveau match'),
                   ),
@@ -82,7 +286,7 @@ class _MatchesPageState extends State<MatchesPage> {
   }
 
   Widget _buildBody(
-    AsyncSnapshot<List<MatchItem>> snapshot,
+    AsyncSnapshot<_MatchesViewData> snapshot,
     List<MatchItem> filteredMatches,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -97,47 +301,13 @@ class _MatchesPageState extends State<MatchesPage> {
       return const _EmptyMatchesState();
     }
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: _buildSections(context, filteredMatches),
+    return RefreshIndicator(
+      onRefresh: _refreshMatches,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: _buildSections(context, filteredMatches),
+      ),
     );
-  }
-
-  Future<List<MatchItem>> _loadMatches() async {
-    final api = YnoughApi();
-    final results = await Future.wait<dynamic>([
-      api.fetchTeams(),
-      api.fetchMatches(),
-    ]);
-
-    final teams = results[0] as List<ApiTeam>;
-    final matches = results[1] as List<ApiMatch>;
-    final teamsById = {for (final team in teams) team.id: team};
-
-    final items = matches
-        .map((match) {
-          final team1 = teamsById[match.team1Id];
-          final team2 = teamsById[match.team2Id];
-          if (team1 == null || team2 == null) {
-            return null;
-          }
-
-          return MatchItem(
-            id: '${match.id}',
-            homeTeamName: team1.name,
-            awayTeamName: team2.name,
-            homePlayers: team1.players,
-            awayPlayers: team2.players,
-            homeScore: match.team1Score,
-            awayScore: match.team2Score,
-            status: _toMatchStatus(match.status),
-          );
-        })
-        .whereType<MatchItem>()
-        .toList();
-
-    items.sort((left, right) => int.parse(right.id).compareTo(int.parse(left.id)));
-    return items;
   }
 
   List<Widget> _buildSections(BuildContext context, List<MatchItem> matches) {
@@ -159,7 +329,14 @@ class _MatchesPageState extends State<MatchesPage> {
         data.map(
           (match) => Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: MatchCard(match: match),
+            child: MatchCard(
+              match: match,
+              onScoreChanged: match.status == MatchStatus.live
+                  ? ({required bool homeTeam, required int delta}) =>
+                      _updateScore(match, homeTeam: homeTeam, delta: delta)
+                  : null,
+              onFinish: match.status == MatchStatus.live ? () => _finishMatch(match) : null,
+            ),
           ),
         ),
       );
@@ -206,9 +383,13 @@ class MatchCard extends StatelessWidget {
   const MatchCard({
     super.key,
     required this.match,
+    this.onScoreChanged,
+    this.onFinish,
   });
 
   final MatchItem match;
+  final void Function({required bool homeTeam, required int delta})? onScoreChanged;
+  final VoidCallback? onFinish;
 
   @override
   Widget build(BuildContext context) {
@@ -235,23 +416,28 @@ class MatchCard extends StatelessWidget {
               teamName: match.homeTeamName,
               players: match.homePlayers,
               score: match.homeScore,
+              editable: match.status == MatchStatus.live,
+              onIncrement: onScoreChanged == null ? null : () => onScoreChanged!(homeTeam: true, delta: 1),
+              onDecrement: onScoreChanged == null ? null : () => onScoreChanged!(homeTeam: true, delta: -1),
             ),
             const SizedBox(height: 14),
             _TeamRow(
               teamName: match.awayTeamName,
               players: match.awayPlayers,
               score: match.awayScore,
+              editable: match.status == MatchStatus.live,
+              onIncrement: onScoreChanged == null ? null : () => onScoreChanged!(homeTeam: false, delta: 1),
+              onDecrement: onScoreChanged == null ? null : () => onScoreChanged!(homeTeam: false, delta: -1),
             ),
             if (match.status == MatchStatus.live) ...[
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: null,
+                  onPressed: onFinish,
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF10B044),
-                    disabledBackgroundColor: const Color(0xFF10B044),
-                    disabledForegroundColor: Colors.white,
+                    foregroundColor: Colors.white,
                   ),
                   icon: const Icon(Icons.check),
                   label: const Text('Terminer le match'),
@@ -270,11 +456,17 @@ class _TeamRow extends StatelessWidget {
     required this.teamName,
     required this.players,
     required this.score,
+    required this.editable,
+    this.onIncrement,
+    this.onDecrement,
   });
 
   final String teamName;
   final List<String> players;
   final int score;
+  final bool editable;
+  final VoidCallback? onIncrement;
+  final VoidCallback? onDecrement;
 
   @override
   Widget build(BuildContext context) {
@@ -303,13 +495,34 @@ class _TeamRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        Text(
-          '$score',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: ynoughBlack,
+        if (editable)
+          Row(
+            children: [
+              IconButton(
+                onPressed: onDecrement,
+                icon: const Icon(Icons.remove_circle_outline),
               ),
-        ),
+              Text(
+                '$score',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: ynoughBlack,
+                    ),
+              ),
+              IconButton(
+                onPressed: onIncrement,
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ],
+          )
+        else
+          Text(
+            '$score',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: ynoughBlack,
+                ),
+          ),
       ],
     );
   }
@@ -419,6 +632,16 @@ class _EmptyMatchesState extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MatchesViewData {
+  const _MatchesViewData({
+    required this.teams,
+    required this.matches,
+  });
+
+  final List<ApiTeam> teams;
+  final List<MatchItem> matches;
 }
 
 MatchStatus _toMatchStatus(String status) {

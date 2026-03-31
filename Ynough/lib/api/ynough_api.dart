@@ -45,6 +45,56 @@ class YnoughApi {
     await _send('DELETE', '/teams/$teamId');
   }
 
+  Future<ApiMatch> createMatch({
+    required int team1Id,
+    required int team2Id,
+    required DateTime date,
+    String status = 'in_progress',
+  }) async {
+    final response = await _send(
+      'POST',
+      '/api/matches',
+      body: {
+        'id_team1': team1Id,
+        'id_team2': team2Id,
+        'status': status,
+        'date': date.toIso8601String(),
+      },
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return ApiMatch.fromJson(data);
+  }
+
+  Future<ApiMatch> updateMatchStatus({
+    required int matchId,
+    required String status,
+  }) async {
+    final response = await _send(
+      'PATCH',
+      '/api/matches/$matchId/status',
+      body: {'status': status},
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return ApiMatch.fromJson(data);
+  }
+
+  Future<ApiMatch> updateMatchScore({
+    required int matchId,
+    required int team1Score,
+    required int team2Score,
+  }) async {
+    final response = await _send(
+      'PATCH',
+      '/api/matches/$matchId/score',
+      body: {
+        'score_team1': team1Score,
+        'score_team2': team2Score,
+      },
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return ApiMatch.fromJson(data);
+  }
+
   Future<List<ApiMatch>> fetchMatches({String? status}) async {
     final response = await _get(
       '/api/matches',
@@ -84,6 +134,12 @@ class YnoughApi {
       );
     } else if (method == 'DELETE') {
       response = await _client.delete(uri);
+    } else if (method == 'PATCH') {
+      response = await _client.patch(
+        uri,
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
     } else {
       throw ApiException('Unsupported HTTP method: $method');
     }

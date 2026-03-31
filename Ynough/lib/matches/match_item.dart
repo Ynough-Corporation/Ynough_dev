@@ -7,6 +7,8 @@ enum MatchStatus {
 class MatchItem {
   const MatchItem({
     required this.id,
+    required this.homeTeamId,
+    required this.awayTeamId,
     required this.homeTeamName,
     required this.awayTeamName,
     required this.homePlayers,
@@ -16,7 +18,9 @@ class MatchItem {
     required this.status,
   });
 
-  final String id;
+  final int id;
+  final int homeTeamId;
+  final int awayTeamId;
   final String homeTeamName;
   final String awayTeamName;
   final List<String> homePlayers;
