@@ -1,61 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'match_item.dart';
+import '../api/ynough_api.dart';
 import '../navbar/navbar.dart';
 import '../widgets/page_header.dart';
-
-const List<MatchItem> _mockMatches = [
-  MatchItem(
-    id: '1',
-    homeTeamName: 'Les Champions',
-    awayTeamName: 'Fire Squad',
-    homePlayers: ['Alex', 'Marie'],
-    awayPlayers: ['Lucas', 'Emma'],
-    homeScore: 9,
-    awayScore: 8,
-    status: MatchStatus.live,
-  ),
-  MatchItem(
-    id: '2',
-    homeTeamName: 'Les Rookies',
-    awayTeamName: 'Les Invincibles',
-    homePlayers: ['Pierre', 'Julie'],
-    awayPlayers: ['Thomas', 'Sophie'],
-    homeScore: 0,
-    awayScore: 0,
-    status: MatchStatus.upcoming,
-  ),
-  MatchItem(
-    id: '3',
-    homeTeamName: 'Power Smash',
-    awayTeamName: 'Thunder Team',
-    homePlayers: ['Noah', 'Lina'],
-    awayPlayers: ['Hugo', 'Lea'],
-    homeScore: 11,
-    awayScore: 6,
-    status: MatchStatus.finished,
-  ),
-  MatchItem(
-    id: '4',
-    homeTeamName: 'Blue Falcons',
-    awayTeamName: 'Red Storm',
-    homePlayers: ['Ines', 'Yanis'],
-    awayPlayers: ['Mila', 'Ethan'],
-    homeScore: 7,
-    awayScore: 10,
-    status: MatchStatus.finished,
-  ),
-  MatchItem(
-    id: '5',
-    homeTeamName: 'Golden Set',
-    awayTeamName: 'Night Hawks',
-    homePlayers: ['Sarah', 'Amine'],
-    awayPlayers: ['Chloe', 'Nolan'],
-    homeScore: 4,
-    awayScore: 2,
-    status: MatchStatus.finished,
-  ),
-];
+import 'match_item.dart';
 
 class MatchesPage extends StatefulWidget {
   const MatchesPage({super.key});
@@ -65,65 +13,131 @@ class MatchesPage extends StatefulWidget {
 }
 
 class _MatchesPageState extends State<MatchesPage> {
+  late final Future<List<MatchItem>> _matchesFuture;
   MatchFilter _selectedFilter = MatchFilter.all;
 
   @override
-  Widget build(BuildContext context) {
-    final matches = _mockMatches;
-    final filteredMatches = _selectedFilter.apply(matches);
+  void initState() {
+    super.initState();
+    _matchesFuture = _loadMatches();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 0, 8, 24),
       color: ynoughCream,
       child: SafeArea(
         top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            PageHeader(
-              title: 'Matchs',
-              subtitle: '${matches.length} matchs programmés',
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: null,
-                icon: const Icon(Icons.add),
-                label: const Text('Nouveau match'),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: MatchFilter.values.map((filter) {
-                final count = filter.apply(matches).length;
-                return ChoiceChip(
-                  selected: _selectedFilter == filter,
-                  label: Text('${filter.label} ($count)'),
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedFilter = filter;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: filteredMatches.isEmpty
-                  ? const _EmptyMatchesState()
-                  : ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: _buildSections(context, filteredMatches),
-                    ),
-            ),
-          ],
+        child: FutureBuilder<List<MatchItem>>(
+          future: _matchesFuture,
+          builder: (context, snapshot) {
+            final matches = snapshot.data ?? const <MatchItem>[];
+            final filteredMatches = _selectedFilter.apply(matches);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                PageHeader(
+                  title: 'Matchs',
+                  subtitle: '${matches.length} matchs programmes',
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Nouveau match'),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: MatchFilter.values.map((filter) {
+                    final count = filter.apply(matches).length;
+                    return ChoiceChip(
+                      selected: _selectedFilter == filter,
+                      label: Text('${filter.label} ($count)'),
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedFilter = filter;
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: _buildBody(snapshot, filteredMatches),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
+  }
+
+  Widget _buildBody(
+    AsyncSnapshot<List<MatchItem>> snapshot,
+    List<MatchItem> filteredMatches,
+  ) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const _MatchesLoadingState();
+    }
+
+    if (snapshot.hasError) {
+      return _MatchesErrorState(error: '${snapshot.error}');
+    }
+
+    if (filteredMatches.isEmpty) {
+      return const _EmptyMatchesState();
+    }
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: _buildSections(context, filteredMatches),
+    );
+  }
+
+  Future<List<MatchItem>> _loadMatches() async {
+    final api = YnoughApi();
+    final results = await Future.wait<dynamic>([
+      api.fetchTeams(),
+      api.fetchMatches(),
+    ]);
+
+    final teams = results[0] as List<ApiTeam>;
+    final matches = results[1] as List<ApiMatch>;
+    final teamsById = {for (final team in teams) team.id: team};
+
+    final items = matches
+        .map((match) {
+          final team1 = teamsById[match.team1Id];
+          final team2 = teamsById[match.team2Id];
+          if (team1 == null || team2 == null) {
+            return null;
+          }
+
+          return MatchItem(
+            id: '${match.id}',
+            homeTeamName: team1.name,
+            awayTeamName: team2.name,
+            homePlayers: team1.players,
+            awayPlayers: team2.players,
+            homeScore: match.team1Score,
+            awayScore: match.team2Score,
+            status: _toMatchStatus(match.status),
+          );
+        })
+        .whereType<MatchItem>()
+        .toList();
+
+    items.sort((left, right) => int.parse(right.id).compareTo(int.parse(left.id)));
+    return items;
   }
 
   List<Widget> _buildSections(BuildContext context, List<MatchItem> matches) {
@@ -142,17 +156,19 @@ class _MatchesPageState extends State<MatchesPage> {
       sections.add(_SectionTitle(title: title));
       sections.add(const SizedBox(height: 12));
       sections.addAll(
-        data.map((match) => Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: MatchCard(match: match),
-            )),
+        data.map(
+          (match) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: MatchCard(match: match),
+          ),
+        ),
       );
     }
 
     if (_selectedFilter == MatchFilter.all) {
       addSection('En cours', liveMatches);
-      addSection('À venir', upcomingMatches);
-      addSection('Terminés', finishedMatches);
+      addSection('A venir', upcomingMatches);
+      addSection('Termines', finishedMatches);
       return sections;
     }
 
@@ -164,8 +180,8 @@ class _MatchesPageState extends State<MatchesPage> {
 enum MatchFilter {
   all('Tous', 'Tous'),
   live('En cours', 'En cours'),
-  upcoming('À venir', 'À venir'),
-  finished('Terminés', 'Terminés');
+  upcoming('A venir', 'A venir'),
+  finished('Termines', 'Termines');
 
   const MatchFilter(this.label, this.sectionTitle);
 
@@ -213,6 +229,8 @@ class MatchCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _StatusBadge(status: match.status),
+            const SizedBox(height: 18),
             _TeamRow(
               teamName: match.homeTeamName,
               players: match.homePlayers,
@@ -276,7 +294,7 @@ class _TeamRow extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                players.isEmpty ? 'Joueurs non renseignés' : players.join(' & '),
+                players.isEmpty ? 'Joueurs non renseignes' : players.join(' & '),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: ynoughBlack.withValues(alpha: 0.62),
                     ),
@@ -308,8 +326,8 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, color, icon) = switch (status) {
       MatchStatus.live => ('En cours', const Color(0xFFFF3B30), Icons.play_arrow_outlined),
-      MatchStatus.upcoming => ('À venir', const Color(0xFF8D99AE), Icons.schedule),
-      MatchStatus.finished => ('Terminé', const Color(0xFF3E5F44), Icons.check_circle_outline),
+      MatchStatus.upcoming => ('A venir', const Color(0xFF8D99AE), Icons.schedule),
+      MatchStatus.finished => ('Termine', const Color(0xFF3E5F44), Icons.check_circle_outline),
     };
 
     return Row(
@@ -361,6 +379,34 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _MatchesLoadingState extends StatelessWidget {
+  const _MatchesLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: CircularProgressIndicator());
+  }
+}
+
+class _MatchesErrorState extends StatelessWidget {
+  const _MatchesErrorState({
+    required this.error,
+  });
+
+  final String error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'Impossible de charger les matchs.\n$error',
+        style: Theme.of(context).textTheme.titleMedium,
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
 class _EmptyMatchesState extends StatelessWidget {
   const _EmptyMatchesState();
 
@@ -372,5 +418,18 @@ class _EmptyMatchesState extends StatelessWidget {
         style: Theme.of(context).textTheme.titleMedium,
       ),
     );
+  }
+}
+
+MatchStatus _toMatchStatus(String status) {
+  switch (status) {
+    case 'in_progress':
+      return MatchStatus.live;
+    case 'finished':
+      return MatchStatus.finished;
+    case 'scheduled':
+    case 'cancelled':
+    default:
+      return MatchStatus.upcoming;
   }
 }
