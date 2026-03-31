@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../matches/matches_page.dart';
 import '../pages/placeholder_page.dart';
+import '../ranking/ranking_page.dart';
 
 const ynoughBlack = Color(0xFF0A0A0A);
+const ynoughGreen = Color(0xFF3E5F44);
 const ynoughCream = Color(0xFFFFF7EB);
 
 class MainNavigationScreen extends StatefulWidget {
@@ -33,7 +35,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       selectedIcon: Icons.groups,
       page: PlaceholderPage(
         title: 'Equipes',
-        subtitle: 'Équipes inscrites, leur nombre de victoires et de défaites, bouton ajouter une équipe',
+        subtitle: 'Equipes inscrites, leur nombre de victoires et de defaites, bouton ajouter une equipe',
         icon: Icons.groups,
       ),
     ),
@@ -47,11 +49,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       title: 'Classement',
       icon: Icons.leaderboard_outlined,
       selectedIcon: Icons.leaderboard,
-      page: PlaceholderPage(
-        title: 'Classement',
-        subtitle: 'Classement général de toutes les équipes',
-        icon: Icons.leaderboard,
-      ),
+      page: RankingPage(),
     ),
   ];
 
