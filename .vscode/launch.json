@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Ynough",
+            "cwd": "Ynough",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "Ynough (profile mode)",
+            "cwd": "Ynough",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "Ynough (release mode)",
+            "cwd": "Ynough",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
