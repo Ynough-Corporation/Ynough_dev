@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ynough/pageEquipe/screen/teams_screen.dart';
 
 const ynoughBlack = Color(0xFF0A0A0A);
 const ynoughCream = Color(0xFFFFF7EB);
@@ -28,11 +29,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       title: 'Equipes',
       icon: Icons.groups_outlined,
       selectedIcon: Icons.groups,
-      page: SectionPage(
-        title: 'Equipes',
-        subtitle: 'Equipes inscrites, leur nombre de victoires et de defaites, bouton ajouter une equipe',
-        icon: Icons.groups,
-      ),
+      page: TeamsScreen(),
     ),
     _NavigationPageData(
       title: 'Matchs',

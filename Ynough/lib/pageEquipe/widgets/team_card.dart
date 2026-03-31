@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 class TeamsCard extends StatelessWidget {
+
   final String teamName;
   final String teamMembers;
   final int points;
@@ -8,34 +8,27 @@ class TeamsCard extends StatelessWidget {
   final int defeats;
   final int difference;
   final double winRate;
-  final VoidCallback onDelete;
+  final VoidCallback onDelete; 
 
-  const TeamsCard({
-    super.key,
-    required this.teamName,
-    required this.teamMembers,
-    required this.points,
-    required this.victories,
-    required this.defeats,
-    required this.difference,
-    required this.winRate,
-    required this.onDelete,
-  });
+  const TeamsCard({super.key, 
+  required this.teamName, 
+  required this.teamMembers,
+  required this.points,
+  required this.victories,
+  required this.defeats,
+  required this.difference,
+  required this.winRate,
+  required this.onDelete});  
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16),
+   return Container(
+
+    margin: EdgeInsets.only(bottom: 16),
+       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(1),
       ),
       child: Column(
         children: [
@@ -44,75 +37,64 @@ class TeamsCard extends StatelessWidget {
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [Text(teamName), Text(teamMembers)],
+                children: [ 
+                  Text(teamName),
+                  Text(teamMembers),
+                ],
               ),
-              IconButton(
-                onPressed: onDelete,
-                icon: Icon(Icons.delete, color: Colors.red, size: 24),
-              ),
-            ],
+              IconButton(onPressed: onDelete, icon: Icon(Icons.delete, color: Colors.red, size: 24)),
+            ],  
           ),
           const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceAround, 
             children: [
               Column(
                 children: [
-                  Text(
-                    points.toString(),
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Text(points.toString(),style: TextStyle(fontWeight: FontWeight.bold)),
                   Text('Points'),
                 ],
               ),
-              Column(
+                Column(
                 children: [
-                  Text(
-                    victories.toString(),
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Text(victories.toString(),style: TextStyle(fontWeight: FontWeight.bold)),
                   Text('V'),
                 ],
               ),
-              Column(
+                Column(
                 children: [
-                  Text(
-                    defeats.toString(),
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Text(defeats.toString(),style: TextStyle(fontWeight: FontWeight.bold)),
                   Text('D'),
                 ],
               ),
-              Column(
+                Column(
                 children: [
-                  Text(
-                    difference.toString(),
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  Text(difference.toString(),style: TextStyle(fontWeight: FontWeight.bold)),
                   Text('Diff'),
                 ],
               ),
             ],
           ),
           Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Taux de victoire'),
-                  Text('${(winRate * 100).toInt()}%'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Taux de victoire'),
+                      Text('${(winRate * 100).toInt()}%'),
+                    ],
+                  ),  
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: winRate,
+                    color:  const Color.fromARGB(255, 13, 43, 235), 
+                    backgroundColor: Color(0xFFE0E0E0), 
+                  ),
                 ],
-              ),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: winRate,
-                color: const Color.fromARGB(255, 13, 43, 235),
-                backgroundColor: Color(0xFFE0E0E0),
-              ),
-            ],
-          ),
+              )
         ],
       ),
     );
   }
-}
+  
+} 
