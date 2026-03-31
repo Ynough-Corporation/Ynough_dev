@@ -19,19 +19,11 @@ class _TeamsScreenState extends State<TeamsScreen> {
       'teamName': 'Les Invincibles',
       'teamMembers': 'Thomas & Sophie',
       'points': 100,
-      'victories': 2,
-      'defeats': 2,
-      'difference': 0,
-      'winRate': 0.50,
     },
     {
       'teamName': 'Fire Squad',
       'teamMembers': 'Lucas & Emma',
       'points': 12,
-      'victories': 4,
-      'defeats': 0,
-      'difference': 20,
-      'winRate': 1.0,
     },
   ];
 
@@ -119,10 +111,6 @@ class _TeamsScreenState extends State<TeamsScreen> {
                     'teamMembers':
                         '${player1Controller.text.trim()} & ${player2Controller.text.trim()}',
                     'points': 0,
-                    'victories': 0,
-                    'defeats': 0,
-                    'difference': 0,
-                    'winRate': 0.0,
                   });
                 });
 
@@ -214,17 +202,13 @@ class _TeamsScreenState extends State<TeamsScreen> {
                   ? _buildEmptyState(context)
                   : ListView.separated(
                       itemCount: teamsList.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final team = teamsList[index];
                         return TeamsCard(
                           teamName: team['teamName'],
                           teamMembers: team['teamMembers'],
                           points: team['points'],
-                          victories: team['victories'],
-                          defeats: team['defeats'],
-                          difference: team['difference'],
-                          winRate: team['winRate'],
                           onDelete: () {
                             setState(() {
                               teamsList.remove(team);
