@@ -213,8 +213,6 @@ class MatchCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _StatusBadge(status: match.status),
-            const SizedBox(height: 18),
             _TeamRow(
               teamName: match.homeTeamName,
               players: match.homePlayers,
