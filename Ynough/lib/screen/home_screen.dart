@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/top_teams_card.dart';
 import '../widgets/next_matches_card.dart';
@@ -35,7 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF3E5F44),
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Image.asset('images/Logo-transparent.png'),
+          child: SvgPicture.asset(
+            'images/Logo-transparent.svg',
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+          ),
         ),
         title: const Text(
           "YNOUGH BABYFOOT",
